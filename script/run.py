@@ -110,8 +110,9 @@ def postprocess(sp_tuple, glog):
   cmpout.close()
 
   # remove out
-  p_rm = subprocess.Popen(['rm', '-f', out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  p_rm.wait() 
+  if (breakpoint != '400bc0'):
+    p_rm = subprocess.Popen(['rm', '-f', out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p_rm.wait() 
 
   glog.write('bp %s invocation %d exitcode %d cmpresult %d\n' % (breakpoint, target_invocation, returncode, cmpresult)) 
 
@@ -149,7 +150,7 @@ def run(insts, after_bp_addr, org_inst_addr, target_addr, glog):
     inst = insts[index]
 
     shift = reserve_process_queue(process, glog)
-    if shift or sample_count == 10:
+    if shift or sample_count == 20:
       # shift to next instruction
       cleanup(process, glog)
       index += 1
@@ -239,7 +240,7 @@ if __name__ == '__main__':
   argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
   argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
   argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
-  argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=0)
+  argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
   argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
   argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
   args = vars(argparser.parse_args())

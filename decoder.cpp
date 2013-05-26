@@ -76,13 +76,13 @@ uint8_t decode_breakpoint(int pid, char* bp, _DecodingInfo* info)
     if (dst_op.type == O_REG)
     {
       // type 1
-      set_decoding_info(info, 1, dst_op.index, -1, -1, 1);
+      set_decoding_info(info, DI_DST_REG, dst_op.index, -1, -1, 1);
     }
     else if (dst_op.type == O_SMEM)
     {
       // type 2
       int32_t imm = (di.dispSize == 0) ? -1 : (int64_t)di.disp;
-      set_decoding_info(info, 2, dst_op.index, -1, -1, imm);
+      set_decoding_info(info, DI_DST_MEM, dst_op.index, -1, -1, imm);
     }
     else if (dst_op.type == O_MEM)
     {
@@ -91,37 +91,37 @@ uint8_t decode_breakpoint(int pid, char* bp, _DecodingInfo* info)
       int8_t index = (dst_op.index == R_NONE) ? -1 : dst_op.index;
       uint8_t scale = (di.scale == 0) ? -1 : di.scale;
       int32_t imm = (di.dispSize == 0) ? -1 : (int64_t)di.disp;
-      set_decoding_info(info, 2, base, index, scale, imm);
+      set_decoding_info(info, DI_DST_MEM, base, index, scale, imm);
     }
   }
   else if (di.opcode == I_CMP)
   {
     // type 3: fix status reg
     int32_t flag = (SF|ZF|PF|CF|OF|AF);
-    set_decoding_info(info, 3, -1, -1, -1, flag);
+    set_decoding_info(info, DI_DST_FLAG, -1, -1, -1, flag);
   }
   else if (di.opcode == I_TEST)
   {
     // type 3: fix status reg
     int32_t flag = (SF|ZF|PF|CF|OF);
-    set_decoding_info(info, 3, -1, -1, -1, flag);
+    set_decoding_info(info, DI_DST_FLAG, -1, -1, -1, flag);
   }
   else if (di.opcode == I_PUSH)
   {
     // type 4: push
-    set_decoding_info(info, 4, -1, -1, -1, -1);
+    set_decoding_info(info, DI_PUSH, -1, -1, -1, -1);
   }
   else if (di.opcode == I_CDQE)
   {
     // type 1: target eax
-    set_decoding_info(info, 4, R_RAX, -1, -1, -1);
+    set_decoding_info(info, DI_DST_REG, R_RAX, -1, -1, -1);
   }
   else
   {
     //check if dst_op is XMM registers indeed
     _Operand dst_op = di.ops[0];
     if (dst_op.type == O_REG && dst_op.index >= R_XMM0 && dst_op.index <= R_XMM15)
-      set_decoding_info(info, 1, dst_op.index, -1, -1, -1);
+      set_decoding_info(info, DI_DST_REG, dst_op.index, -1, -1, -1);
     else
       return 0;
   }

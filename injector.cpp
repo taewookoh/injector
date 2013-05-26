@@ -1,5 +1,6 @@
 #include "decoder.h"
-#include "manage_bp.h"
+#include "bpmanager.h"
+#include "flipper.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,19 +28,29 @@
  * configuration 
  */
 
-#define NO_INJECTION 100
+#define NO_INJECTION  100
+#define FORCE_TIMEOUT 101
 
-uint64_t bp = 0xFFFFFFFFFFFFFFFFL;
-uint64_t target = 0xFFFFFFFFFFFFFFFFL;
-enum _bp_type {NONE, ADDR, TIME} bp_type = NONE;
-char* progname = NULL;
-char* progargs = NULL;
-int64_t timeout = -1;
-char* after_bp_addr = NULL;
-char* org_inst_addr = NULL;
-char* target_addr = NULL;
+static uint64_t bp = 0xFFFFFFFFFFFFFFFFL;
+static uint64_t target = 0;
+static enum _bp_type {NONE, ADDR, TIME} bp_type = NONE;
+static char* progname = NULL;
+static char* progargs = NULL;
+static int64_t timeout = -1;
+static char* after_bp_addr = NULL;
+static char* org_inst_addr = NULL;
+static char* target_addr = NULL;
 
-static unsigned char org_inst;
+static int pid;
+
+/*
+ * SIGALRM handler for timeout
+ */
+static void sigalrm_handler(int sig, siginfo_t *siginfo, void *dummy)
+{
+  kill(pid, SIGKILL);
+  exit(FORCE_TIMEOUT);
+}
 
 void parse_command_line_arg(int argc, char** argv)
 {
@@ -174,10 +185,10 @@ void parse_command_line_arg(int argc, char** argv)
     fprintf(stderr, "breakpoint type needs to be set with -t option\n");
     exit(1);
   }
-  if ( target == 0xFFFFFFFFFFFFFFFFL )
+  if ( target == 0 )
   {
     fprintf(stderr, "delay (for TIME type) or dynamic target instance (for ADDR type) needs to be set with -d option");
-    fprintf(stderr, " (-1 is an invalid value)\n");
+    fprintf(stderr, " (should be a positive integer value)\n");
     exit(1);
   }
   if ( bp_type == ADDR && bp == 0xFFFFFFFFFFFFFFFFL )
@@ -202,10 +213,12 @@ void parse_command_line_arg(int argc, char** argv)
   }
 }
 
-void addr_type_handler(int pid)
+int addr_type_handler(int pid)
 {
   int status;
   int init = 0;
+  int hit = 0;
+  _DecodingInfo info;
 
   while(1)
   {
@@ -214,7 +227,13 @@ void addr_type_handler(int pid)
     if (WIFEXITED(status))
     {
       printf("target exited\n");
-      break;
+      if (hit)
+        return WEXITSTATUS(status);
+      else
+      {
+        fprintf(stderr, "target terminated before hit the injection point\n");
+        return NO_INJECTION;
+      }
     }
     else if (WIFSTOPPED(status))
     {
@@ -226,27 +245,35 @@ void addr_type_handler(int pid)
           init = 1;
 
           // initialize information related to breakpoint
-          _DecodingInfo info;
           uint8_t size = decode_breakpoint(pid, (char*)bp, &info);
           if (size == 0)
           {
             fprintf(stderr, "unable to set breakpoint at instruction %p\n", (char*)bp);
-            exit(NO_INJECTION);
+            kill(pid, SIGKILL);
+            return NO_INJECTION;
           }
           printf("%lx, size: %u\n", bp, size);
           if (size)
             printf("-- %u %d %d %u %d\n", info.type, info.base, info.index, info.scale, info.imm);
 
           setup_bp(pid, bp, bp+size, after_bp_addr, org_inst_addr, target, target_addr);
-          //ptrace(PTRACE_CONT,pid,0,0);
-          ptrace(PTRACE_DETACH,pid,0,0);
+
+          if (target == 1)
+            ptrace(PTRACE_CONT,pid,0,0);
+          else
+            ptrace(PTRACE_DETACH,pid,0,0);
         }
         else
         {
+          hit = 1;
+
           // this should be called only after reattachment
 
           // suppress breakpoint
           suppress_bp(pid, bp);
+
+          // flip a destination
+          stop_and_flip(pid, bp, info);
 
           ptrace(PTRACE_CONT,pid,0,0);
         }
@@ -256,9 +283,16 @@ void addr_type_handler(int pid)
     }
     else
     {
-      fprintf(stderr, "signum: %d\n", WSTOPSIG(status));
-      fprintf(stderr, "!WIFEXITED && !WIFSTOPPED");
-      exit(1);
+      printf("signum: %d\n", WSTOPSIG(status));
+      printf("!WIFEXITED && !WIFSTOPPED\n");
+      kill(pid, SIGKILL);
+      if (hit)
+        return 1;
+      else
+      {
+        fprintf(stderr, "target terminated before hit the injection point\n");
+        return NO_INJECTION;
+      }
     }
   }
 }
@@ -266,21 +300,27 @@ void addr_type_handler(int pid)
 void time_type_handler(int pid)
 {
   perror("not implemented yet\n");
+  kill(pid, SIGKILL);
   exit(1);
 }
 
 int main(int argc, char** argv)
 {
+  // initialize random seed
+  srand(getpid());
+
+  // register sigalrm handler
+  struct sigaction original, replacement;
+  replacement.sa_flags = SA_SIGINFO;
+  sigemptyset( &replacement.sa_mask );
+  replacement.sa_sigaction = &sigalrm_handler;
+  sigaction( SIGALRM, &replacement, &original );
+
   // parse command line
   parse_command_line_arg(argc, argv);
 
-  int pid;
-/*
-  unsigned long bp = strtol(argv[1], NULL, 0);
-  unsigned long after_bp = strtol(argv[2], NULL, 0);
-  unsigned long after_bp_addr = strtol(argv[3], NULL, 0);
-  unsigned long org_inst_addr = strtol(argv[4], NULL, 0);
-*/
+  int exitcode = 0;
+
   if ( (pid = fork()) == -1 )
   {
     perror("fork");
@@ -296,9 +336,15 @@ int main(int argc, char** argv)
   }
   else
   {
+    if (timeout != -1)
+      alarm(timeout);
+
     if (bp_type == ADDR)
-      addr_type_handler(pid);
+      exitcode = addr_type_handler(pid);
     else // bp_type == TIME
       time_type_handler(pid);
   }
+
+  printf("exit with code %d\n", exitcode);
+  exit(exitcode);
 }

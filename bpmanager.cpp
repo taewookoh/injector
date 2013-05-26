@@ -22,7 +22,7 @@ void setup_bp(int pid, unsigned long bp, unsigned long after_bp, void* after_bp_
   uint64_t new_code = (code & 0xFFFFFFFFFFFFFF00L) | 0xcc;
   ptrace(PTRACE_POKEDATA, pid, bp, new_code);
   uint64_t confirm_code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
-  printf("%p, code: %lx -> %lx\n", bp, code, confirm_code);
+  printf("%p, code: %lx -> %lx\n", (void*)bp, code, confirm_code);
 
   __org_inst = code & 0xff;
 
