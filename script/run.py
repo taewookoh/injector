@@ -240,35 +240,35 @@ def summarize(glog, summary):
     summary.write('  %s : %d\n' % (bp, pcs.count(bp)))
 
 if __name__ == '__main__':
-  #argparser = argparse.ArgumentParser(description='Injector driver')
-  #argparser.add_argument('-i', '--injector', help='Injector program', required=True)
-  #argparser.add_argument('-p', '--prog', help='Target program', required=True)
-  #argparser.add_argument('-c', '--cmp', help='Program to compare outputs. Exit code should be 0 if outputs are same, non-zero otherwise', required=True)
-  #argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
-  #argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
-  #argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
-  #argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
-  #argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
-  #argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
-  #args = vars(argparser.parse_args())
+  argparser = argparse.ArgumentParser(description='Injector driver')
+  argparser.add_argument('-i', '--injector', help='Injector program', required=True)
+  argparser.add_argument('-p', '--prog', help='Target program', required=True)
+  argparser.add_argument('-c', '--cmp', help='Program to compare outputs. Exit code should be 0 if outputs are same, non-zero otherwise', required=True)
+  argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
+  argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
+  argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
+  argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
+  argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
+  argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
+  args = vars(argparser.parse_args())
 
-  # initialize global variables 
-  #injector = args['injector']
-  #prog = args['prog']
-  #cmp = args['cmp']
-  #ref = args['ref']
-  #timeout = args['timeout']
-  #sampling_interval = args['sampling_interval']
-  #first_sample = args['first_sample']
-  #outdir = args['outdir']
-  #max_process = args['max_process']
+   initialize global variables 
+  injector = args['injector']
+  prog = args['prog']
+  cmp = args['cmp']
+  ref = args['ref']
+  timeout = args['timeout']
+  sampling_interval = args['sampling_interval']
+  first_sample = args['first_sample']
+  outdir = args['outdir']
+  max_process = args['max_process']
 
-  #insts = get_static_insts(prog)
-  #(after_bp_addr, org_inst_addr, target_addr) = get_buffer_addrs(prog)
+  insts = get_static_insts(prog)
+  (after_bp_addr, org_inst_addr, target_addr) = get_buffer_addrs(prog)
 
-  #glog = open(outdir+'/glog.txt', 'w')
-  #run(insts, after_bp_addr, org_inst_addr, target_addr, glog)
-  #glog.close()
+  glog = open(outdir+'/glog.txt', 'w')
+  run(insts, after_bp_addr, org_inst_addr, target_addr, glog)
+  glog.close()
 
   glog = open(outdir+'/glog.txt', 'r')
   summary = open(outdir+'/summary.txt', 'w')
