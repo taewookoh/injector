@@ -5,6 +5,7 @@ import sys
 import subprocess
 import random
 import re
+import math
 
 NO_INJECTION = 100
 
@@ -115,7 +116,7 @@ def postprocess(sp_tuple, glog):
 
   injectionlog = '\n'
   # parse logfile
-  f_stdout = open(logfile, 'r')
+  f_stdout = open(log, 'r')
   for line in f_stdout.readlines():
     if re.match(r'^\[injection,.+\]$', line, re.M):
       injectionlog = line
@@ -245,19 +246,22 @@ if __name__ == '__main__':
   argparser.add_argument('-p', '--prog', help='Target program', required=True)
   argparser.add_argument('-c', '--cmp', help='Program to compare outputs. Exit code should be 0 if outputs are same, non-zero otherwise', required=True)
   argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
-  argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
+  argparser.add_argument('-t', '--timeout', type=float, help='Timeout', default=-1)
   argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
   argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
   argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
   argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
   args = vars(argparser.parse_args())
 
-   initialize global variables 
+  #initialize global variables 
   injector = args['injector']
   prog = args['prog']
   cmp = args['cmp']
   ref = args['ref']
-  timeout = args['timeout']
+  if timeout != -1 and timeout < 10: # minimum timeout
+  	timeout = 10
+  else:
+    timeout = math.ceil(args['timeout'])
   sampling_interval = args['sampling_interval']
   first_sample = args['first_sample']
   outdir = args['outdir']
