@@ -110,11 +110,16 @@ def postprocess(sp_tuple, glog):
   cmpout.close()
 
   # remove out
-  if (breakpoint != '400bc0'):
-    p_rm = subprocess.Popen(['rm', '-f', out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    p_rm.wait() 
+  p_rm = subprocess.Popen(['rm', '-f', out], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  p_rm.wait() 
 
-  glog.write('bp %s invocation %d exitcode %d cmpresult %d\n' % (breakpoint, target_invocation, returncode, cmpresult)) 
+  injectionlog = '\n'
+  # parse logfile
+  f_stdout = open(logfile, 'r')
+  for line in f_stdout.readlines():
+    if re.match(r'^\[injection,.+\]$', line, re.M):
+      injectionlog = line
+  glog.write('bp %s invocation %d exitcode %d cmpresult %d log %s' % (breakpoint, target_invocation, returncode, cmpresult, injectionlog)) 
 
   return returncode != NO_INJECTION
 
@@ -184,10 +189,10 @@ def summarize(glog, summary):
 
   for line in glog.readlines():
     total += 1
-    exitcode = line.partition('exitcode ')[2].partition(',')[0]
-    pc = line.partition('bp ')[2].partition(',')[0]
+    exitcode = line.partition('exitcode ')[2].partition(' ')[0]
+    pc = line.partition('bp ')[2].partition(' ')[0]
     pcs.append(pc)
-    cmp = line.partition('cmpresult ')[2].partition(',')[0]
+    cmp = line.partition('cmpresult ')[2].partition(' ')[0]
 
     if (exitcode == '0'):
       if (cmp == '0'):
@@ -206,7 +211,9 @@ def summarize(glog, summary):
     else:
       crashed += 1
 
-  summary.write('total: %d\n' % total)
+  total_org = total
+  total -= skipped
+  summary.write('total: %d (%d - %d)\n' % (total, total_org, skipped) )
 
   masked_perc = '%.2f' % (float(masked)/float(total)*100)
   summary.write('masked: %d(%s)\n' % ( masked, masked_perc ))
@@ -214,8 +221,8 @@ def summarize(glog, summary):
   sdc_perc = '%.2f' % (float(sdc)/float(total)*100)
   summary.write('sdc: %d(%s)\n' % ( sdc, sdc_perc ))
 
-  skipped_perc = '%.2f' % (float(skipped)/float(total)*100)
-  summary.write('skipped: %d(%s)\n' % ( skipped, skipped_perc ))
+  #skipped_perc = '%.2f' % (float(skipped)/float(total)*100)
+  #summary.write('skipped: %d(%s)\n' % ( skipped, skipped_perc ))
 
   timeout_perc = '%.2f' % (float(timeout)/float(total)*100)
   summary.write('timeout: %d(%s)\n' % ( timeout, timeout_perc ))
@@ -233,35 +240,35 @@ def summarize(glog, summary):
     summary.write('  %s : %d\n' % (bp, pcs.count(bp)))
 
 if __name__ == '__main__':
-  argparser = argparse.ArgumentParser(description='Injector driver')
-  argparser.add_argument('-i', '--injector', help='Injector program', required=True)
-  argparser.add_argument('-p', '--prog', help='Target program', required=True)
-  argparser.add_argument('-c', '--cmp', help='Program to compare outputs. Exit code should be 0 if outputs are same, non-zero otherwise', required=True)
-  argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
-  argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
-  argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
-  argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
-  argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
-  argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
-  args = vars(argparser.parse_args())
+  #argparser = argparse.ArgumentParser(description='Injector driver')
+  #argparser.add_argument('-i', '--injector', help='Injector program', required=True)
+  #argparser.add_argument('-p', '--prog', help='Target program', required=True)
+  #argparser.add_argument('-c', '--cmp', help='Program to compare outputs. Exit code should be 0 if outputs are same, non-zero otherwise', required=True)
+  #argparser.add_argument('-r', '--ref', help='Reference output to check correctness', required=True)
+  #argparser.add_argument('-t', '--timeout', type=int, help='Timeout', default=-1)
+  #argparser.add_argument('-s', '--sampling_interval', type=int, help='Sampling interval', default=10000)
+  #argparser.add_argument('-f', '--first_sample', type=int, help='Invocation count of first sample for each breakpoint', default=1)
+  #argparser.add_argument('-o', '--outdir', help='Directory to put outputs', required=True)
+  #argparser.add_argument('-m', '--max_process', type=int, help='Maximum number of parallel processes', default=10)
+  #args = vars(argparser.parse_args())
 
   # initialize global variables 
-  injector = args['injector']
-  prog = args['prog']
-  cmp = args['cmp']
-  ref = args['ref']
-  timeout = args['timeout']
-  sampling_interval = args['sampling_interval']
-  first_sample = args['first_sample']
-  outdir = args['outdir']
-  max_process = args['max_process']
+  #injector = args['injector']
+  #prog = args['prog']
+  #cmp = args['cmp']
+  #ref = args['ref']
+  #timeout = args['timeout']
+  #sampling_interval = args['sampling_interval']
+  #first_sample = args['first_sample']
+  #outdir = args['outdir']
+  #max_process = args['max_process']
 
-  insts = get_static_insts(prog)
-  (after_bp_addr, org_inst_addr, target_addr) = get_buffer_addrs(prog)
+  #insts = get_static_insts(prog)
+  #(after_bp_addr, org_inst_addr, target_addr) = get_buffer_addrs(prog)
 
-  glog = open(outdir+'/glog.txt', 'w')
-  run(insts, after_bp_addr, org_inst_addr, target_addr, glog)
-  glog.close()
+  #glog = open(outdir+'/glog.txt', 'w')
+  #run(insts, after_bp_addr, org_inst_addr, target_addr, glog)
+  #glog.close()
 
   glog = open(outdir+'/glog.txt', 'r')
   summary = open(outdir+'/summary.txt', 'w')

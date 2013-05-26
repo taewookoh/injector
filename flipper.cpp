@@ -69,7 +69,7 @@ void flip_reg(int pid, _DecodingInfo info)
     // verify
     ptrace(PTRACE_GETREGS, pid, 0, &regs);
     newval = get_reg(&regs, info.base);
-    printf("injection, flip_reg, %s, %lx->%lx (bit %u)\n", get_regname(info.base), val, newval, togglebit);
+    printf("[injection, flip_reg, %s, %lx->%lx, bit %u]\n", get_regname(info.base), val, newval, togglebit);
   }
   else if ( get_regtype(info.base) == X87REGS )
   {
@@ -86,7 +86,7 @@ void flip_reg(int pid, _DecodingInfo info)
     // verify
     ptrace(PTRACE_GETFPREGS, pid, 0, &regs);
     newval = get_fpreg(&regs, info.base, togglebit / 32);
-    printf("injection, flip_reg, %s, %x->%x (bit %d)\n", get_regname(info.base), val, newval, togglebit);
+    printf("[injection, flip_reg, %s, %x->%x, bit %d]\n", get_regname(info.base), val, newval, togglebit);
   }
   else if ( get_regtype(info.base) == XMMREGS )
   {
@@ -103,7 +103,7 @@ void flip_reg(int pid, _DecodingInfo info)
     // verify
     ptrace(PTRACE_GETFPREGS, pid, 0, &regs);
     newval = get_fpreg(&regs, info.base, togglebit / 32);
-    printf("injection, flip_reg, %s, %x->%x (bit %d)\n", get_regname(info.base), val, newval, togglebit);
+    printf("[injection, flip_reg, %s, %x->%x, bit %d]\n", get_regname(info.base), val, newval, togglebit);
   }
   else
   {
@@ -136,7 +136,7 @@ void flip_mem(int pid, _DecodingInfo info)
 
   // verify
   newdata = ptrace(PTRACE_PEEKDATA, pid, addr, 0);
-  printf("injection, flip_mem, %lx, %lx->%lx (bit %d)\n", addr, data, newdata, togglebit);
+  printf("[injection, flip_mem, %lx, %lx->%lx, bit %d]\n", addr, data, newdata, togglebit);
 }
 
 void flip_flag(int pid, _DecodingInfo info)
@@ -161,7 +161,7 @@ void flip_flag(int pid, _DecodingInfo info)
   // verify
   ptrace(PTRACE_GETREGS, pid, 0, &regs);
   newval = regs.eflags;
-  printf("injection, flip_flag, EFLAGS, %lx->%lx (bit %d)\n", val, newval, togglebit);
+  printf("[injection, flip_flag, EFLAGS, %lx->%lx, bit %d]\n", val, newval, togglebit);
 }
 
 void flip_stack_top(int pid)
@@ -179,5 +179,5 @@ void flip_stack_top(int pid)
 
   // verify
   newdata = ptrace(PTRACE_PEEKDATA, pid, addr, 0);
-  printf("injection, flip_stack_top, %lx, %lx->%lx (bit %d)\n", addr, data, newdata, togglebit);
+  printf("[injection, flip_stack_top, %lx, %lx->%lx, bit %d]\n", addr, data, newdata, togglebit);
 }
