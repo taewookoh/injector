@@ -156,7 +156,7 @@ def run(insts, after_bp_addr, org_inst_addr, target_addr, glog):
     inst = insts[index]
 
     shift = reserve_process_queue(process, glog)
-    if shift or sample_count == 20:
+    if shift:
       # shift to next instruction
       cleanup(process, glog)
       index += 1
