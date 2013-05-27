@@ -6,11 +6,25 @@
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 
-#ifndef __USE_GNU
-#define __USE_GNU
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 
 #include <ucontext.h>
+
+#if (defined (__x86_64__))
+  #ifndef REG_RIP
+    #ifndef offsetof
+      #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+    #endif
+
+    #ifndef REG_INDEX
+      #define REG_INDEX(NAME) (offsetof(struct sigcontext, NAME) / sizeof(greg_t))
+    #endif
+
+    #define REG_RIP REG_INDEX(rip) /* seems to be 16 */
+  #endif
+#endif
 
 unsigned __count = 0;
 
@@ -33,7 +47,11 @@ static void sigtrap_handler(int sig, siginfo_t* siginfo, void* dummy)
     __count += 1;
 
     struct ucontext* u = (struct ucontext*)dummy;
+#ifdef __USE_GNU
     unsigned char* pc = (unsigned char *)u->uc_mcontext.gregs[REG_RIP];
+#else
+    unsigned char* pc = (unsigned char *)u->uc_mcontext.gregs[REG_RIP];
+#endif
 
     // remember original breakpoint
     __bp = (void*)(pc-1);
