@@ -1,19 +1,32 @@
-.PHONY: check_distorm test clean
+.PHONY: check_distorm test clean $(BENCH) $(BENCH)-clean
 
-AFTER_BP_ADDR=$(shell objdump -D ./test/target | grep "<__after_bp>:" | awk '{print $$1}')
-ORG_INST_ADDR=$(shell objdump -D ./test/target | grep "<__org_inst>:" | awk '{print $$1}')
-TARGET_ADDR=$(shell objdump -D ./test/target | grep "<__target_dynamic_instance>:" | awk '{print $$1}')
+RESIL_BASE=/u/twoh/research/liberty/liberty/projects/resilience/
+BASEDIR=$(RESIL_BASE)/injector
 
-all: guard-DISTORM_DIR injector
+BENCHDIR=$(RESIL_BASE)/benchmarks/polybench-c-3.2/linear-algebra/kernels/$(BENCH)/
+RESULTDIR=$(BASEDIR)/$(BENCH).results
+SCRIPTDIR=$(BASEDIR)/scripts
+
+all: injector
 
 clean: 
 	rm -f *.o injector
 
+$(BENCH): $(BENCH)-clean guard-DISTORM_DIR guard-BENCH setup injector $(BENCHDIR)/$(BENCH).check.exe $(RESULTDIR)/$(BENCH).check.time $(RESULTDIR)/$(BENCH).base.out
+	$(eval reftime := $(shell cat $(RESULTDIR)/$(BENCH).check.time))
+	$(eval timeout := $(shell echo $(reftime)\*512 | bc))
+	/usr/bin/time --output=$(BENCH).exp.time -f "%e" python $(SCRIPTDIR)/run.py -i ./injector -p $(BENCHDIR)/$(BENCH).check.exe -c $(SCRIPTDIR)/cmp.py -r $(RESULTDIR)/$(BENCH).base.out -t $(timeout) -o $(RESULTDIR)
+
+$(BENCH)-clean:
+	cd $(BENCHDIR); \
+	make clean; \
+	cd -
+
+setup:
+	mkdir -p $(RESULTDIR)
+
 injector: injector.o decoder.o bpmanager.o flipper.o regmap.o
 	g++ -O3 -o $@ $^ -L$(DISTORM_DIR)/build/lib.linux-x86_64-2.6/distorm3 -ldistorm3
-
-test: injector 
-	./injector --type a --prog ./test/target --breakpoint 0x400b27 --target 0 --after_bp_addr 0x$(AFTER_BP_ADDR) --org_inst_addr 0x$(ORG_INST_ADDR) --target_addr 0x$(TARGET_ADDR)
 
 %.o: %.cpp
 	g++ -O3 -c -o $@ $< -I$(DISTORM_DIR)/include
@@ -23,3 +36,19 @@ guard-%:
     echo "Environment variable $* not set"; \
     exit 1; \
   fi
+
+$(BENCHDIR)/$(BENCH).check.exe:
+	cd $(BENCHDIR); \
+	make $(BENCH).check.exe FIFLAG=-DFAULT_INJECTION; \
+	cd -
+
+$(BENCHDIR)/$(BENCH).exe:
+	cd $(BENCHDIR); \
+	make $(BENCH).exe; \
+	cd -
+
+$(RESULTDIR)/$(BENCH).check.time: $(BENCHDIR)/$(BENCH).check.exe
+	/usr/bin/time --output=$@ -f "%e" $(BENCHDIR)/$(BENCH).check.exe 2> /dev/null
+
+$(RESULTDIR)/$(BENCH).base.out : $(BENCHDIR)/$(BENCH).exe
+	$(BENCHDIR)/$(BENCH).exe 2> $@
