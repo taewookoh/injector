@@ -1,0 +1,16 @@
+kernels
+  2mm - done, 30.46
+  3mm - done, 44.61
+  atax - done, 0.34
+  bicg - done, 0.41
+  cholesky - WRONG
+  doitgen - done, 4.96
+  gemm - done, 16.64
+  gemver - done, 0.77
+  gesummv - done, 0.56
+  mvt - done, 0.53
+  symm
+  syr2k - done, 16.15
+  syrk - done, 5.24
+  trisolv
+  trmm - WRONG
