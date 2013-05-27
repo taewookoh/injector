@@ -47,11 +47,7 @@ static void sigtrap_handler(int sig, siginfo_t* siginfo, void* dummy)
     __count += 1;
 
     struct ucontext* u = (struct ucontext*)dummy;
-#ifdef __USE_GNU
     unsigned char* pc = (unsigned char *)u->uc_mcontext.gregs[REG_RIP];
-#else
-    unsigned char* pc = (unsigned char *)u->uc_mcontext.gregs[REG_RIP];
-#endif
 
     // remember original breakpoint
     __bp = (void*)(pc-1);
