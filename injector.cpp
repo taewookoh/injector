@@ -42,14 +42,23 @@ static char* org_inst_addr = NULL;
 static char* target_addr = NULL;
 
 static int pid;
+static int hit;
 
 /*
  * SIGALRM handler for timeout
  */
 static void sigalrm_handler(int sig, siginfo_t *siginfo, void *dummy)
 {
-  kill(pid, SIGKILL);
-  exit(FORCE_TIMEOUT);
+  if (hit)
+  {
+    kill(pid, SIGKILL);
+    exit(FORCE_TIMEOUT);
+  }
+  else
+  {
+    // use long timeout (2 hours)
+    alarm(60*60*2);
+  }
 }
 
 void parse_command_line_arg(int argc, char** argv)
@@ -217,7 +226,6 @@ int addr_type_handler(int pid)
 {
   int status;
   int init = 0;
-  int hit = 0;
   _DecodingInfo info;
 
   while(1)
