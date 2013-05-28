@@ -1,11 +1,13 @@
 .PHONY: check_distorm test clean $(BENCH) $(BENCH)-clean
 
-RESIL_BASE=/u/twoh/research/liberty/liberty/projects/resilience/
+DISTORM_DIR:=$(CURDIR)/distorm3
+
+RESIL_BASE=/home/hanjunk/
 BASEDIR=$(RESIL_BASE)/injector
 
-BENCHDIR=$(RESIL_BASE)/benchmarks/polybench-c-3.2/linear-algebra/kernels/$(BENCH)/
+BENCHDIR=$(BASEDIR)/polybench-c-3.2/linear-algebra/kernels/$(BENCH)/
 RESULTDIR=$(BASEDIR)/$(BENCH).results
-SCRIPTDIR=$(BASEDIR)/scripts
+SCRIPTDIR=$(BASEDIR)/script
 
 all: injector
 
@@ -15,7 +17,7 @@ clean:
 $(BENCH): $(BENCH)-clean guard-DISTORM_DIR guard-BENCH setup injector $(BENCHDIR)/$(BENCH).check.exe $(RESULTDIR)/$(BENCH).check.time $(RESULTDIR)/$(BENCH).base.out
 	$(eval reftime := $(shell cat $(RESULTDIR)/$(BENCH).check.time))
 	$(eval timeout := $(shell echo $(reftime)\*512 | bc))
-	/usr/bin/time --output=$(BENCH).exp.time -f "%e" python $(SCRIPTDIR)/run.py -i ./injector -p $(BENCHDIR)/$(BENCH).check.exe -c $(SCRIPTDIR)/cmp.py -r $(RESULTDIR)/$(BENCH).base.out -t $(timeout) -o $(RESULTDIR)
+	#/usr/bin/time --output=$(BENCH).exp.time -f "%e" python $(SCRIPTDIR)/run.py -i ./injector -p $(BENCHDIR)/$(BENCH).check.exe -c $(SCRIPTDIR)/cmp.py -r $(RESULTDIR)/$(BENCH).base.out -t $(timeout) -o $(RESULTDIR)
 
 $(BENCH)-clean:
 	cd $(BENCHDIR); \

@@ -1,7 +1,3 @@
-#include "decoder.h"
-#include "bpmanager.h"
-#include "flipper.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,6 +19,10 @@
 #include <sstream>
 
 #include <vector>
+
+#include "decoder.h"
+#include "bpmanager.h"
+#include "flipper.h"
 
 /*
  * configuration 

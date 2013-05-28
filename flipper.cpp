@@ -1,7 +1,7 @@
+#include <signal.h>
+
 #include "flipper.h"
 #include "regmap.h"
-
-#include <signal.h>
 
 void stop_and_flip(int pid, uint64_t bp, _DecodingInfo info)
 {
