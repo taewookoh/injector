@@ -28,8 +28,9 @@
  * configuration 
  */
 
-#define NO_INJECTION  100
+#define NO_INJECTION 100
 #define FORCE_TIMEOUT 101
+#define NO_INJECTION_CRASH 103
 
 static uint64_t bp = 0xFFFFFFFFFFFFFFFFL;
 static uint64_t target = 0;
@@ -298,8 +299,8 @@ int addr_type_handler(int pid)
         return 1;
       else
       {
-        fprintf(stderr, "target terminated before hit the injection point\n");
-        return NO_INJECTION;
+        fprintf(stderr, "target crashed before hit the injection point\n");
+        return NO_INJECTION_CRASH;
       }
     }
   }

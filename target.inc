@@ -118,3 +118,7 @@ static void install_sigtrap_handler()
   sigaction( SIGTRAP, &r, &o);
 }
 
+__attribute__((destructor)) void end(void)
+{
+  printf("__count: %u\n", __count);
+}

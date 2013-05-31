@@ -1,6 +1,6 @@
 BENCH ?= $(shell basename $(CURDIR))
 
-RESIL_BASE=/home/hanjunk/
+RESIL_BASE=/home/twoh/
 INJECTOR_DIR=$(RESIL_BASE)/injector
 INCLUDE=-I$(INJECTOR_DIR)/polybench-c-3.2/utilities -I$(INJECTOR_DIR)
 POLYBENCH_OBJ=$(INJECTOR_DIR)/polybench-c-3.2/utilities/polybench.o
