@@ -28,7 +28,7 @@ setup:
 	mkdir -p $(RESULTDIR)
 
 injector: injector.o decoder.o bpmanager.o flipper.o regmap.o
-	g++ -O3 -o $@ $^ -L$(DISTORM_DIR)/build/lib.linux-x86_64-2.6/distorm3 -ldistorm3
+	g++ -O3 -o $@ $^ -L$(DISTORM_DIR)/build/lib/distorm3 -ldistorm3
 
 %.o: %.cpp
 	g++ -O3 -c -o $@ $< -I$(DISTORM_DIR)/include
