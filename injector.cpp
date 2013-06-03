@@ -28,9 +28,7 @@
  * configuration 
  */
 
-#define NO_INJECTION 100
-#define FORCE_TIMEOUT 101
-#define NO_INJECTION_CRASH 103
+#include "exitcodes.h"
 
 static uint64_t bp = 0xFFFFFFFFFFFFFFFFL;
 static uint64_t target = 0;
@@ -240,7 +238,7 @@ int addr_type_handler(int pid)
         return WEXITSTATUS(status);
       else
       {
-        fprintf(stderr, "target terminated before hit the injection point\n");
+        printf("target terminated before hit the injection point\n");
         return NO_INJECTION;
       }
     }
@@ -257,9 +255,9 @@ int addr_type_handler(int pid)
           uint8_t size = decode_breakpoint(pid, (char*)bp, &info);
           if (size == 0)
           {
-            fprintf(stderr, "unable to set breakpoint at instruction %p\n", (char*)bp);
+            printf("unable to set breakpoint at instruction %p\n", (char*)bp);
             kill(pid, SIGKILL);
-            return NO_INJECTION;
+            return UNABLE_TO_INJECT;
           }
           printf("%lx, size: %u\n", bp, size);
           if (size)
@@ -299,7 +297,7 @@ int addr_type_handler(int pid)
         return 1;
       else
       {
-        fprintf(stderr, "target crashed before hit the injection point\n");
+        printf("target crashed before hit the injection point\n");
         return NO_INJECTION_CRASH;
       }
     }
