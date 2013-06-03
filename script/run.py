@@ -8,6 +8,8 @@ import re
 import math
 
 NO_INJECTION = 100
+NO_INJECTION_CRASH = 103
+UNABLE_TO_INJECT = 104
 
 injector = ''
 prog = ''
@@ -40,6 +42,8 @@ def get_buffer_addrs(prog):
   a = ''
   o = ''
   t = ''
+  h = ''
+  within_handler = False
   for line in out.split('\n'):
     if re.match( r'^[0-9a-f]+ <__after_bp>:', line, re.M):
       a = line.split()[0]
@@ -47,8 +51,16 @@ def get_buffer_addrs(prog):
       o = line.split()[0]
     if re.match( r'^[0-9a-f]+ <__target_dynamic_instance>:', line, re.M):
       t = line.split()[0]
+    if re.match( r'^[0-9a-f]+ <install_sigtrap_handler>:', line, re.M):
+      within_handler = True
+    if within_handler and re.match( r'^  [0-9a-f]*:\t', line, re.M):
+      insts = line.partition(':\t')[2]
+      head = insts.split()[0]
+      if ( head == 'c3' or head == 'cb' or head == 'c2' or head == 'ca' ):
+        h = line.partition(':\t')[0].lstrip()
+        within_handler = False
    
-  return (a, o, t)
+  return (a, o, t, h)
 
 def reserve_process_queue(process, glog):
   # two pass
@@ -122,9 +134,9 @@ def postprocess(sp_tuple, glog):
       injectionlog = line
   glog.write('bp %s invocation %d exitcode %d cmpresult %d log %s' % (breakpoint, target_invocation, returncode, cmpresult, injectionlog)) 
 
-  return returncode != NO_INJECTION
+  return returncode != NO_INJECTION and returncode != NO_INJECTION_CRASH and returncode != UNABLE_TO_INJECT
 
-def run(insts, after_bp_addr, org_inst_addr, target_addr, glog):
+def run(insts, after_bp_addr, org_inst_addr, target_addr, sigtrap_ret, glog):
   def get_args(inst, target_invocation):
     args = []
     args.append(injector)
@@ -144,6 +156,9 @@ def run(insts, after_bp_addr, org_inst_addr, target_addr, glog):
     args.append('0x%s' % org_inst_addr)
     args.append('--target_addr')
     args.append('0x%s' % target_addr)
+    args.append('--sigtrap_handler_ret')
+    args.append('0x%s' % sigtrap_ret)
+
     return args
 
   # tuple of (Popen object, iteration, bptime)
@@ -268,10 +283,10 @@ if __name__ == '__main__':
   max_process = args['max_process']
 
   insts = get_static_insts(prog)
-  (after_bp_addr, org_inst_addr, target_addr) = get_buffer_addrs(prog)
+  (after_bp_addr, org_inst_addr, target_addr, sigtrap_ret) = get_buffer_addrs(prog)
 
   glog = open(outdir+'/glog.txt', 'w')
-  run(insts, after_bp_addr, org_inst_addr, target_addr, glog)
+  run(insts, after_bp_addr, org_inst_addr, target_addr, sigtrap_ret, glog)
   glog.close()
 
   glog = open(outdir+'/glog.txt', 'r')

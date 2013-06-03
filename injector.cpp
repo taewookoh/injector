@@ -39,6 +39,7 @@ static int64_t timeout = -1;
 static char* after_bp_addr = NULL;
 static char* org_inst_addr = NULL;
 static char* target_addr = NULL;
+static char* sigtrap_handler_ret = NULL;
 
 static int pid;
 static int hit;
@@ -74,11 +75,12 @@ void parse_command_line_arg(int argc, char** argv)
       {"after_bp_addr", required_argument, 0, 'a'},
       {"org_inst_addr", required_argument, 0, 'o'},
       {"target_addr", required_argument, 0, 'r'},
+      {"sigtrap_handler_ret", required_argument, 0, 'h'},
       {0, 0, 0, 0}
     };
 
     int option_index = 0;
-    int c = getopt_long(argc, argv, "t:b:d:p:a:o:c:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "t:b:p:i:g:a:o:r:h:", long_options, &option_index);
 
     // end of the options 
     if ( c == -1 )
@@ -117,6 +119,19 @@ void parse_command_line_arg(int argc, char** argv)
           exit(1);
         }
         bp = strtol(optarg, NULL, 0);
+        break;
+
+      case 'p':
+        progname = strdup(optarg);
+        break;
+
+      case 'i':
+        timeout = strtol(optarg, NULL, 10);
+        break;
+
+      case 'g':
+        // target invocation count or target delay
+        target = strtol(optarg, NULL, 10);
         break;
 
       case 'a':
@@ -164,17 +179,19 @@ void parse_command_line_arg(int argc, char** argv)
         target_addr = (char*)strtol(optarg, NULL, 0);
         break;
 
-      case 'g':
-        // target invocation count or target delay
-        target = strtol(optarg, NULL, 10);
-        break;
-
-      case 'p':
-        progname = strdup(optarg);
-        break;
-
-      case 'i':
-        timeout = strtol(optarg, NULL, 10);
+      case 'h':
+        // sigtrap handler return addr
+        if ( !optarg || strlen(optarg) < 2 )
+        {
+          fprintf(stderr, "sigtrap_handler_ret needs to be given as hexadecimal number beginning with 0x\n", optarg);
+          exit(1);
+        }
+        else if ( optarg[0] != '0' || ( optarg[1] != 'x' && optarg[1] != 'X' ) )
+        {
+          fprintf(stderr, "sigtrap_handler_ret needs to be given as hexadecimal number beginning with 0x\n", optarg);
+          exit(1);
+        }
+        sigtrap_handler_ret = (char*)strtol(optarg, NULL, 0);
         break;
 
       default:
@@ -265,24 +282,42 @@ int addr_type_handler(int pid)
 
           setup_bp(pid, bp, bp+size, after_bp_addr, org_inst_addr, target, target_addr);
 
-          if (target == 1)
-            ptrace(PTRACE_CONT,pid,0,0);
-          else
-            ptrace(PTRACE_DETACH,pid,0,0);
+          // setup breakpoint at the return from sigtrap handler
+          setup_sigtrap_handler_ret_bp(pid, (unsigned long)sigtrap_handler_ret);
+
+          ptrace(PTRACE_CONT,pid,0,0);
         }
         else
         {
           hit = 1;
+      
+          // check breakpoint
+          struct user_regs_struct regs;
+          ptrace(PTRACE_GETREGS, pid, 0, &regs);
+          if (regs.rip-1 == (unsigned long)sigtrap_handler_ret)
+          {
+            suppress_sigtrap_handler_ret_bp(pid, (unsigned long)sigtrap_handler_ret);
+            if (target == 1)
+              ptrace(PTRACE_CONT,pid,0,0);
+            else
+              ptrace(PTRACE_DETACH,pid,0,0);
+          }
+          else if (regs.rip-1 == (unsigned long)bp)
+          {
+            // suppress breakpoint
+            suppress_bp(pid, bp);
 
-          // this should be called only after reattachment
+            // flip a destination
+            stop_and_flip(pid, bp, info);
 
-          // suppress breakpoint
-          suppress_bp(pid, bp);
-
-          // flip a destination
-          stop_and_flip(pid, bp, info);
-
-          ptrace(PTRACE_CONT,pid,0,0);
+            ptrace(PTRACE_CONT,pid,0,0);
+          }
+          else
+          {
+            printf("unexpected SIGTRAP\n");
+            kill(pid, SIGKILL);
+            return 1;
+          }
         }
       }
       else
@@ -290,8 +325,12 @@ int addr_type_handler(int pid)
     }
     else
     {
-      printf("signum: %d\n", WSTOPSIG(status));
-      printf("!WIFEXITED && !WIFSTOPPED\n");
+      printf("WIFSIGNALED: %d\n", WIFSIGNALED(status));
+      if ( WIFSIGNALED(status) )
+      {
+        printf("  WTERMSIG: %d\n", WTERMSIG(status));
+        printf("  strsignal(WTERMSIG(stats)): %s\n", strsignal(WTERMSIG(status)));
+      }
       kill(pid, SIGKILL);
       if (hit)
         return 1;

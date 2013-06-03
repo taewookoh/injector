@@ -10,10 +10,14 @@
 #endif
 #include <ucontext.h>
 
+#include "bpmanager.h"
+
 static uint8_t __org_inst;
+static uint8_t __sigtrap_handler_ret_org_inst;
 
 void setup_bp(int pid, unsigned long bp, unsigned long after_bp, void* after_bp_addr, void* org_inst_addr, unsigned target, void* target_addr)
 {
+  printf("setup_bp\n");
   struct user_regs_struct regs;
   ptrace(PTRACE_GETREGS, pid, 0, &regs);
   printf("rip: %lx\n", regs.rip);
@@ -42,8 +46,41 @@ void setup_bp(int pid, unsigned long bp, unsigned long after_bp, void* after_bp_
 
 void suppress_bp(int pid, unsigned long bp)
 {
+  printf ("suppress_bp\n");
+
   uint64_t code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
   uint64_t new_code = (code & 0xFFFFFFFFFFFFFF00L) | ( (uint64_t)__org_inst );
+  ptrace(PTRACE_POKETEXT, pid, bp, new_code);
+  uint64_t confirm_code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
+  printf("suppress, code: %lx -> %lx\n", code, confirm_code);
+
+  struct user_regs_struct regs;
+  ptrace(PTRACE_GETREGS, pid, 0, &regs);
+  printf("suppress, rip: %lx\n", regs.rip);
+
+  // roll back one instruction
+  regs.rip -= 1;
+  ptrace(PTRACE_SETREGS, pid, 0, &regs);
+}
+
+void setup_sigtrap_handler_ret_bp(int pid, unsigned long bp)
+{
+  printf("setup_sigtrap_handler_ret_bp\n");
+  uint64_t code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
+  uint64_t new_code = (code & 0xFFFFFFFFFFFFFF00L) | 0xcc;
+  ptrace(PTRACE_POKEDATA, pid, bp, new_code);
+  uint64_t confirm_code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
+  printf("%p, code: %lx -> %lx\n", (void*)bp, code, confirm_code);
+
+  __sigtrap_handler_ret_org_inst = code & 0xff;
+}
+
+void suppress_sigtrap_handler_ret_bp(int pid, unsigned long bp)
+{
+  printf("suppress_sigtrap_handler_ret_bp\n");
+
+  uint64_t code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
+  uint64_t new_code = (code & 0xFFFFFFFFFFFFFF00L) | ( (uint64_t)__sigtrap_handler_ret_org_inst );
   ptrace(PTRACE_POKETEXT, pid, bp, new_code);
   uint64_t confirm_code = ptrace(PTRACE_PEEKTEXT, pid, bp, 0);
   printf("suppress, code: %lx -> %lx\n", code, confirm_code);
