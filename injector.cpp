@@ -42,7 +42,8 @@ static char* target_addr = NULL;
 static char* sigtrap_handler_ret = NULL;
 
 static int pid;
-static int hit;
+static int hit = 0;
+static int sigtrap_handler_installed = 0;
 
 /*
  * SIGALRM handler for timeout
@@ -132,6 +133,11 @@ void parse_command_line_arg(int argc, char** argv)
       case 'g':
         // target invocation count or target delay
         target = strtol(optarg, NULL, 10);
+        if (target == 0)
+        {
+          fprintf(stderr, "target instruction count or target delay should not be 0\n");
+          exit(1);
+        }
         break;
 
       case 'a':
@@ -289,13 +295,13 @@ int addr_type_handler(int pid)
         }
         else
         {
-          hit = 1;
-      
           // check breakpoint
           struct user_regs_struct regs;
           ptrace(PTRACE_GETREGS, pid, 0, &regs);
           if (regs.rip-1 == (unsigned long)sigtrap_handler_ret)
           {
+            sigtrap_handler_installed = 1;
+
             suppress_sigtrap_handler_ret_bp(pid, (unsigned long)sigtrap_handler_ret);
             if (target == 1)
               ptrace(PTRACE_CONT,pid,0,0);
@@ -304,11 +310,23 @@ int addr_type_handler(int pid)
           }
           else if (regs.rip-1 == (unsigned long)bp)
           {
-            // suppress breakpoint
-            suppress_bp(pid, bp);
+            // if sigtrap handler is not installed yet, check the target.
+            // if target invocation is not 1, it is not actually a hit.
+            if (sigtrap_handler_installed || target == 1)
+            {
+              hit = 1;
 
-            // flip a destination
-            stop_and_flip(pid, bp, info);
+              // suppress breakpoint
+              suppress_bp(pid, bp);
+
+              // flip a destination
+              stop_and_flip(pid, bp, info);
+            }
+            else
+            {
+              // just suppress breakpoint
+              suppress_bp(pid, bp);
+            }
 
             ptrace(PTRACE_CONT,pid,0,0);
           }
@@ -325,7 +343,9 @@ int addr_type_handler(int pid)
     }
     else
     {
-      printf("WIFSIGNALED: %d\n", WIFSIGNALED(status));
+      struct user_regs_struct regs;
+      ptrace(PTRACE_GETREGS, pid, 0, &regs);
+      printf("WIFSIGNALED: %d, rip: %p\n", WIFSIGNALED(status), (void*)regs.rip);
       if ( WIFSIGNALED(status) )
       {
         printf("  WTERMSIG: %d\n", WTERMSIG(status));

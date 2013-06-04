@@ -30,8 +30,10 @@ def get_static_insts(prog):
   lines = out.split('\n')
   for line in lines:
     if re.match( r'^  [0-9a-f]*:\t', line, re.M):
-      addr = line.partition(':\t')[0].lstrip()
-      insts.append(addr)
+      part = line.partition(':\t')
+      addr = part[0].lstrip()
+      if '\t' in part[2]:   # valid disassmebled instruction exists
+        insts.append(addr)
 
   return insts
 
@@ -134,7 +136,7 @@ def postprocess(sp_tuple, glog):
       injectionlog = line
   glog.write('bp %s invocation %d exitcode %d cmpresult %d log %s' % (breakpoint, target_invocation, returncode, cmpresult, injectionlog)) 
 
-  return returncode != NO_INJECTION and returncode != NO_INJECTION_CRASH and returncode != UNABLE_TO_INJECT
+  return returncode != NO_INJECTION and returncode != UNABLE_TO_INJECT
 
 def run(insts, after_bp_addr, org_inst_addr, target_addr, sigtrap_ret, glog):
   def get_args(inst, target_invocation):
