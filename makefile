@@ -54,3 +54,6 @@ $(RESULTDIR)/$(BENCH).check.time: $(BENCHDIR)/$(BENCH).check.exe
 
 $(RESULTDIR)/$(BENCH).base.out : $(BENCHDIR)/$(BENCH).exe
 	$(BENCHDIR)/$(BENCH).exe 2> $@
+
+ba:
+	g++ -c backannotator.cpp -I/home/twoh/local/include

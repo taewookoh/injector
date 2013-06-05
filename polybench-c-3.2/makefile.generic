@@ -27,5 +27,9 @@ $(BENCH).check.exe: $(POLYBENCH_OBJ) $(BENCH).c
 	gcc -O3 -c -o $(BENCH).check.o $(BENCH).c $(INCLUDE) -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_USE_C99_PROTO -DCHECK $(FIFLAG) $(DATATYPE) $(DATASET)
 	gcc -O3 -o $@ $(POLYBENCH_OBJ) $(BENCH).check.o -lm
 
+$(BENCH).dwarf.exe: $(POLYBENCH_OBJ) $(BENCH).c
+	gcc -O3 -gdwarf-2 -c -o $(BENCH).check.o $(BENCH).c $(INCLUDE) -DPOLYBENCH_DUMP_ARRAYS -DPOLYBENCH_USE_C99_PROTO -DCHECK $(FIFLAG) $(DATATYPE) $(DATASET)
+	gcc -O3 -gdwarf-2 -o $@ $(POLYBENCH_OBJ) $(BENCH).check.o -lm
+
 %.o: %.c
 	gcc -O3 -c -o $@ $< $(INCLUDE)
