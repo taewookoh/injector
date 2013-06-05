@@ -2,7 +2,7 @@
 
 DISTORM_DIR:=$(CURDIR)/distorm3
 
-RESIL_BASE=/home/hanjunk/
+RESIL_BASE=/home/twoh/
 BASEDIR=$(RESIL_BASE)/injector
 
 BENCHDIR=$(BASEDIR)/polybench-c-3.2/linear-algebra/kernels/$(BENCH)/
