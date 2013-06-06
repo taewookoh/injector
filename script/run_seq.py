@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/home/twoh/local/bin/python
 
 import argparse
 import sys

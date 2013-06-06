@@ -1,6 +1,6 @@
 .PHONY: check_distorm test clean $(BENCH) $(BENCH)-clean
 
-DISTORM_DIR:=$(CURDIR)/distorm3
+DISTORM_DIR:=/home/twoh/local/src/distorm3
 
 RESIL_BASE=/home/twoh/
 BASEDIR=$(RESIL_BASE)/injector

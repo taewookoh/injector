@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/home/twoh/local/bin/python
 
 import argparse
 import sys
@@ -87,7 +87,7 @@ def parse_log(log, insts):
 
   f.close()
 
-def append_annotation(addrlist, insts, outlist, line):
+def append_annotation(addrlist, insts, outlist):
   for addr in addrlist:
     if not addr in insts:
       continue 
@@ -107,7 +107,7 @@ def append_annotation(addrlist, insts, outlist, line):
     s_perc = s / float(total)
     d = inst.detect
     d_perc = d / float(total)
-    s = '// [FAULTINJECTION] line %d, total %d mask %d(%.2f) crash %d(%.2f) timeout %d(%.2f) sdc %d(%.2f) detect %d(%2.f)\n' % (line, total, m, m_perc, c, c_perc, t, t_perc, s, s_perc, d, d_perc)
+    s = '// [FAULTINJECTION] %s, total %d mask %d(%.2f) crash %d(%.2f) timeout %d(%.2f) sdc %d(%.2f) detect %d(%.2f)\n' % (addr, total, m, m_perc, c, c_perc, t, t_perc, s, s_perc, d, d_perc)
     outlist.append(s)
 
 def annotate(locations, insts, outdir):
@@ -135,7 +135,7 @@ def annotate(locations, insts, outdir):
         index += 1
 
       # add annatation
-      append_annotation(m[linenum], insts, outlist, linenum)
+      append_annotation(m[linenum], insts, outlist)
       
     while index <= len(inlist):
       outlist.append( inlist[index-1] )
